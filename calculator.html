@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+	<title>3G and 4G Smartphones Data Calculator</title>
+		<link type="text/css" href="css/ui-lightness/jquery-ui-1.8.17.custom.css" rel="stylesheet" />	
+		<script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>
+		<script type="text/javascript" src="js/jquery-ui-1.8.17.custom.min.js"></script>
+		<script type="text/javascript">
+			
+			var emailSlider, webSlider, appGamesSongsSlider, audioSlider, videoSlider, socialSlider, totalDataUsageSlider;
+			
+			var totalDataUsageTicks = ['10+GB', '8 GB', '6 GB', '4 GB', '2 GB', '0 GB'];
+			
+			var dailyEmailsTicks = ['0', '5', '25', '50', '100', '250'];
+			var dailyWebPagesTicks = ['0', '5', '25', '50', '100', '250'];				
+			var dailyAppGamesSongsTicks = ['0', '1', '2', '3', '5', '10'];
+			var dailyAudioTicks = ['0', '5min', '15min', '60min', '120min', '240min'];
+			var dailyVideoTicks = ['0', '5min', '15min', '60min', '120min', '240min'];
+			var dailySocialTicks = ['0', '10', '50', '100', '250', '500'];
+			
+			var monthlyEmailsTicks = ['0', '150', '750', '1500', '3000', '7500'];
+			var monthlyWebPagesTicks = ['0', '150', '750', '1500', '3000', '7500'];				
+			var monthlyAppGamesSongsTicks = ['0', '10', '20', '30', '50', '100'];
+			var monthlyAudioTicks = ['0', '600min', '1200min', '1800min', '2400min', '3000min'];
+			var monthlyVideoTicks = ['0', '600min', '1200min', '1800min', '2400min', '3000min'];
+			var monthlySocialTicks = ['0', '150', '1500', '3000', '5000', '10000'];
+			
+			var emailSizeKb = 25;
+			var webPageSizeKb = 400;
+			var appSizeKb = 4096;
+			var audioSizeKb = 500;
+			var videoSizeKb = 2048;
+			var socialPostSizeKb = 500;
+			
+		
+			function initSlider(dailyTicks, monthlyTicks, sliderId, dailyMonthlySelectId){
+				var slider = $("#" + sliderId).slider({
+		        	animate: true,
+		        	range: "min",
+		            min: 0,
+		            max: dailyTicks.length,
+		            start: function(event, ui) {
+		                event.originalEvent.type == "mousedown" && $(this).addClass("ui-slider-mousesliding");
+		            },
+		            stop: function(event, ui) {
+		                $(this).removeClass("ui-slider-mousesliding");
+		                refreshTicks($(this), ui.value);
+		            },
+		            slide: function(event, ui) {
+		            	return false;
+		            },
+		            change: updateTotal
+		        });    
+		        
+		        initTicks(slider, dailyTicks);
+		        
+		        $('#' + dailyMonthlySelectId).on('change', function(){
+		        	var value = $(this).val()
+		        	if('daily' == value){
+		        		changeTicks(slider, dailyTicks)
+		        	}else{
+		        		changeTicks(slider, monthlyTicks)
+		        	}
+		        })
+				
+		        return slider;				
+			}
+			
+			function updateTotal(){				
+				/*
+				1 Email sent/received (no attachments) = 25KB
+				1 Web page= 400KB
+				1 Apps/Games/Songs downloaded =  4MB
+				1 minute Audio Streaming  = 500KB 
+				1 minute of Streaming  Video = 2MB
+				1 Social Media posts with photos = 500KB 
+				*/
+				
+				var emails = monthlyEmailsTicks[emailSlider.slider('value')] * emailSizeKb
+				var webpages = monthlyWebPagesTicks[webSlider.slider('value')] * webPageSizeKb
+				var apps = monthlyAppGamesSongsTicks[appGamesSongsSlider.slider('value')] * appSizeKb
+				var songs = monthlyAudioTicks[audioSlider.slider('value')].replace('min', '') * audioSizeKb
+				var videos = monthlyVideoTicks[videoSlider.slider('value')].replace('min', '') * videoSizeKb
+				var socialPosts = monthlySocialTicks[socialSlider.slider('value')] * socialPostSizeKb
+				
+				var totalMonthlyDataUsageKb = emails + webpages + apps + songs + videos + socialPosts
+				var totalMonthlyDataUsageMb = (totalMonthlyDataUsageKb/1024)
+				var totalMonthlyDataUsageGb = (totalMonthlyDataUsageMb/(1024))
+				totalDataUsageSlider.slider('value', totalMonthlyDataUsageGb * 100);
+				
+				$('#total-data-slider-flyout-text').html()
+				$('#gb-label').text(totalMonthlyDataUsageGb.toFixed(2) + ' GB/mo')
+				$('#kb-label').text(totalMonthlyDataUsageKb.toFixed(2) + ' KB/mo')
+				
+				$('.total-data-slider .ui-slider-handle').html('<div id="total-data-slider-flyout-text"><span id="gb-label">' + totalMonthlyDataUsageGb.toFixed(2) + ' GB/mo<span><span id="mb-label">(' + totalMonthlyDataUsageMb.toFixed(2) + ' MB/mo)</span></div>')
+				
+				$('#debug').html('<h3>Debug Area</h3>total monthly data usage (kb): ' + totalMonthlyDataUsageKb + '<br />total monthly data usage (gb): ' + totalMonthlyDataUsageGb + '<br />total data usage slider value: ' + totalDataUsageSlider.slider('value'))
+			}
+			
+			function initTicks(slider, ticks){
+				var sliderId = slider.attr('id');				
+				
+				$(ticks).each(function(i) {
+		        	var tickClass = (i == 0 ? 'tick ui-widget-header' : 'tick ui-widget-content')      	
+		        	var tickId = sliderId + '-tick-' + i;
+		        	
+		        	var text = this;
+		        	
+		        	if(text.indexOf('min') != -1){
+		        		text = text.replace('min', '');
+		        		text += '<span class="small-text">min</span>';
+		        	}
+		        	
+		            var tick = $('<div class="' + tickClass + '" id="' + tickId + '"><div class="tick-label">' + text + '</div></div>').appendTo(slider);
+		            tick.css({
+		                left: (100 / ticks.length * i) + '%',
+		                width: (100 / ticks.length) + '%'
+		            });
+		            
+		            $('#' + tickId).click(function(e) {
+		                moveSlider(e, sliderId, i);
+		                return false;
+		             });
+		        })
+			}
+			
+			function changeTicks(slider, ticks){
+				var sliderId = slider.attr('id');				
+				
+				$(ticks).each(function(i) {
+		        	var tickId = sliderId + '-tick-' + i;
+		        	$('#' + tickId).detach()
+		        })
+		        
+		        initTicks(slider, ticks)
+		        refreshTicks(slider, slider.slider('value'))
+			}
+		
+			function refreshTicks(slider, selectedTickIndex) {
+	           slider.find(".tick").each(function(i) {
+	        	    var selected = (i == selectedTickIndex);
+	        	    $(this)
+	                    [(selected ? 'add' : 'remove') + 'Class']("ui-widget-header")
+	                    [(selected ? 'remove' : 'add') + 'Class']("ui-widget-content");		        	    
+	            });
+	        }
+	        
+	        function moveSlider(e, sliderId, num) {
+				e.preventDefault();
+				$('#' + sliderId).slider('value', num)
+				refreshTicks($('#' + sliderId), num);
+			}
+		
+			$(function(){
+		        emailSlider = initSlider(dailyEmailsTicks, monthlyEmailsTicks, 'email-slider', 'email-frequency');
+		        webSlider = initSlider(dailyWebPagesTicks, monthlyWebPagesTicks, 'web-pages-slider', 'web-frequency');
+		        appGamesSongsSlider = initSlider(dailyAppGamesSongsTicks, monthlyAppGamesSongsTicks, 'app-games-songs-slider', 'apps-frequency');
+		        audioSlider = initSlider(dailyAudioTicks, monthlyAudioTicks, 'audio-streaming-slider', 'audio-frequency');
+				videoSlider = initSlider(dailyVideoTicks, monthlyVideoTicks,'video-streaming-slider', 'video-frequency');
+		        socialSlider = initSlider(dailySocialTicks, monthlySocialTicks,'social-with-photos-slider', 'social-frequency');
+		        
+		        totalDataUsageSlider = $( ".total-data-slider" ).slider({
+					orientation: "vertical",
+					range: "min",
+					min: 0,
+					max: 1000,
+					value: 0,
+					animate: true,
+					disabled : true
+				});
+		        
+		        $('.total-data-slider .ui-slider-handle').html('<div id="total-data-slider-flyout-text"><span id="gb-label">0 GB/mo<span><span id="mb-label">(0 MB/mo)</span></div>')
+		        
+		        $(totalDataUsageTicks).each(function(i) {
+		        	var tickId = 'total-data-slider-tick-' + i;
+		        	var text = this
+		            var tick = $('<div id="' + tickId + '">' + text + '</div>').appendTo(totalDataUsageSlider);
+		            tick.css({
+		                top: (100 / totalDataUsageTicks.length * i) + '%',
+		                'margin-left': '-55px',
+		                'margin-bottom':'-1px',
+		                height: (100 / totalDataUsageTicks.length) + 3 + '%'
+		            });
+		        })
+			});
+		</script>
+		<style type="text/css">
+			#header {clear:both; width: 800px}
+			#header img{ border:none; }
+			#header h1{ float:right; margin-top:-35px;}
+		
+			hr {clear:both; width: 915px; float:left;}
+			
+			#main-wrapper { clear:both; width: 915px;}
+			#left-column { float:left; width: 400px;}
+			#right-column { float:right;}
+			
+			#right-column h2{}
+			#left-column h2 {/* TODO - fill in styles here */}
+			.subtitle {color:#666; margin-top:-22px; margin-left:2px;}
+			
+			.small-text {font-size:xx-small; font-weight: normal;}	
+		
+			.slider-wrapper { height: 1.25em; width: 400px; margin:40px 0; }
+			.slider { height: 1.85em; }
+		    .slider .ui-slider-range { z-index: 1;}
+		    .slider .tick { z-index: 30; position: absolute; height: 100%; font-size: 0.75em; line-height: 2.05em; background: none; border: none; text-align: center; cursor: pointer; font-weight:bold;}
+		    .slider .ui-slider-handle { z-index: 20; height: 65px; width: 65px; top: 0; border: none; margin-top: -0.90em; margin-left: -0.00em; }	
+		    .ui-slider-horizontal .ui-state-default {background: url(images/bluebutton-65x65.png) no-repeat scroll 50% 50% transparent; }	
+		    
+		    .total-data-slider {margin-left:100px; margin-top:60px; } 
+		    .total-data-slider .ui-slider-handle {z-index: 2; height: 75px; width: 200px; border: none; margin-left: 0.4em; margin-bottom: -1.30em; text-decoration:none}
+		    .ui-slider-vertical .ui-state-default {background: url(images/box-medium.png) no-repeat scroll 0 0 transparent; }
+		    #total-data-slider-flyout-text{position:relative; left: 70px; top:20px; color:white; }
+		    #gb-label{font-size:large}	
+		    #mb-label{display:block; font-size:small}
+		    
+		    #calc-guidelines{ border-top: 1px solid black; color:#666; margin-top: 60px; padding: 3px;}
+		    /*.slider .ui-widget-header {background: #f6a828; }*/
+		    
+		    .ui-slider-handle:focus{ outline: none;	}
+		    
+		    .wrapper {width: 560px; margin-top: -20px;}
+		    .wrapper select {float:right; margin-top:-58px; height: 1.50em; font-size:1.25em; color:#666;}		
+		    
+		    #disclaimer{clear:both; width: 580px; color:#666; position:relative; top:20px; left: 5px;}
+		    
+		    /*#debug {position: absolute; left: 1000px; top: 200px; border:1px solid black;}*/    	   	    
+		</style>
+	</head>
+	<body>
+		<div id="header">
+			<div id="logo"><img src="images/logo-200x100.png" /></div>
+			<h1>3G and 4G Smartphones Data Calculator</h1>
+		</div>
+		<hr />	
+	
+		<div id="main-wrapper">
+			<div id="left-column">
+				<h2>Emails sent/received (no attachments)</h2>
+				<p class="subtitle">How many text-only emails do you send?</p>
+				<div class="wrapper">
+					<div class="slider-wrapper"><div class="slider" id="email-slider"></div></div>
+					<select id="email-frequency" autocomplete="off">
+						<option value="daily" selected="selected">Per Day</option>
+						<option value="monthly">Per Month</option>
+					</select>
+				</div>
+					
+				<h2>Web Pages Viewed</h2>
+				<div class="wrapper">	
+					<div class="slider-wrapper"><div class="slider" id="web-pages-slider"></div></div>
+					<select id="web-frequency" autocomplete="off">
+						<option value="daily" selected="selected">Per Day</option>
+						<option value="monthly">Per Month</option>
+					</select>
+				</div>
+				
+				<h2>Apps / Games / Songs downloaded</h2>
+				<div class="wrapper">
+					<div class="slider-wrapper"><div class="slider" id="app-games-songs-slider"></div></div>
+					<select id="apps-frequency" autocomplete="off">
+						<option value="daily" selected="selected">Per Day</option>
+						<option value="monthly">Per Month</option>
+					</select>
+				</div>
+				
+				<h2>Audio Streaming</h2>
+				<p class="subtitle">Hours of streaming music</p>
+				<div class="wrapper">
+					<div class="slider-wrapper"><div class="slider" id="audio-streaming-slider"></div></div>
+					<select id="audio-frequency" autocomplete="off">
+						<option value="daily" selected="selected">Per Day</option>
+						<option value="monthly">Per Month</option>
+					</select>
+				</div>
+				
+				<h2>Video Streaming</h2>
+				<p class="subtitle">Minutes of streaming video</p>
+				<div class="wrapper">
+					<div class="slider-wrapper"><div class="slider" id="video-streaming-slider"></div></div>
+					<select id="video-frequency" autocomplete="off">
+						<option value="daily" selected="selected">Per Day</option>
+						<option value="monthly">Per Month</option>
+					</select>
+				</div>
+				
+				<h2>Social Media Posts with photos</h2>
+				<div class="wrapper">
+					<div class="slider-wrapper"><div class="slider" id="social-with-photos-slider"></div></div>
+					<select id="social-frequency" autocomplete="off">
+						<option value="daily" selected="selected">Per Day</option>
+						<option value="monthly">Per Month</option>
+					</select>		
+				</div>
+			</div>
+			<div id="right-column">
+				<h2>Total Monthly Data Usage</h2>
+				<div style="width: 2.75em; height: 400px;" class="total-data-slider"></div>
+				<div id="calc-guidelines">
+					General Guideline for calculations: <br />
+					1 Email sent/received (no attachments) = 25KB <br />
+					1 Web page = 400KB <br />
+					1 Apps/Games/Songs downloaded = 4MB <br />
+					1 minute Audio Streaming = 500KB <br />
+					1 minute of Streaming Video = 2MB <br />
+					1 Social Media posts with photos = 500KB
+				</div>
+			</div>
+		</div>
+		
+		<div id="disclaimer">
+			Data usage varies per phone/device. The above examples are based on averages using a smartphone and are estimates only.
+			The actual amount of data used for the described activity can vary significantly. Wi-Fi usage does not count against the data
+			included in your plan<br />
+			1 MB = 1,024 KB; 1 GB = 1,024 MB
+		</div>
+		
+		<!-- 
+		<div id="debug"><h3>Debug Area</h3></div>
+		 -->
+	</body>
+</html>
